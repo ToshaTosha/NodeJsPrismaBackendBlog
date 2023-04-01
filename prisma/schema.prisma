@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  email         String        @unique
+  passwordHash  String
+  role          Role          @default(BASIC)
+  name          String        @unique
+  avatarUrl     String?       @default("")
+  status        String?       @default("")
+  writtenPosts  Post[]        @relation("WrittenPosts")
+  favoritePosts Post[]
+  comments      Comment[]
+  commentsLikes CommentLike[]
+  postLikes     PostLike[]
+}
+
+model Post {
+  id          Int        @id @default(autoincrement())
+  title       String
+  content     Json
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  author      User       @relation("WrittenPosts", fields: [authorId], references: [id])
+  authorId    Int
+  views       Int        @default(0)
+  favoritedBy User[]
+  comments    Comment[]
+  postLikes   PostLike[]
+}
+
+model PostLike {
+  user   User @relation(fields: [userId], references: [id])
+  post   Post @relation(fields: [postId], references: [id])
+  userId Int
+  postId Int
+
+  @@id([userId, postId])
+}
+
+model Comment {
+  id            String        @id @default(uuid())
+  message       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        Int
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId        Int
+  parent        Comment?      @relation("ParentChild", fields: [parentId], references: [id], onDelete: Cascade)
+  children      Comment[]     @relation("ParentChild")
+  parentId      String?
+  commentsLikes CommentLike[]
+}
+
+model CommentLike {
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    Int
+  commentId String
+
+  @@id([userId, commentId])
+}
+
+enum Role {
+  BASIC
+  ADMIN
+}
